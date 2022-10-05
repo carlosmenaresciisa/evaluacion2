@@ -56,6 +56,7 @@ public class proceso extends HttpServlet {
             
             dao.create(user);
             
+            
             System.out.println("#### YA CREAMOS BIEN EL REGISTRO:" );
             System.out.println("Nombre:" + user.getNombre());
             System.out.println("Apellido:" + user.getApellido());

@@ -4,9 +4,8 @@
  */
 package dao;
 
-import cl.ciisa.evaluaciondos.exceptions.exceptions.NonexistentEntityException;
-import cl.ciisa.evaluaciondos.exceptions.exceptions.PreexistingEntityException;
-import cl.ciisa.evaluaciondos.exceptions.exceptions.RollbackFailureException;
+import dao.exceptions.NonexistentEntityException;
+import dao.exceptions.PreexistingEntityException;
 import entities.Usuario;
 import java.io.Serializable;
 import java.util.List;
@@ -17,52 +16,35 @@ import javax.persistence.EntityNotFoundException;
 import javax.persistence.Persistence;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
-import javax.transaction.RollbackException;
-import javax.transaction.SystemException;
-import javax.transaction.UserTransaction;
 
 /**
  *
  * @author MenaresDesarrollo
  */
 public class UsuarioDAO implements Serializable {
-    
-    private UserTransaction utx = null;
-    //private EntityManagerFactory emf = null;
-    private EntityManagerFactory emf = Persistence.createEntityManagerFactory("my_persistence_unit");
 
-    public UsuarioDAO(UserTransaction utx, EntityManagerFactory emf) {
-        this.utx = utx;
+    public UsuarioDAO(EntityManagerFactory emf) {
+     
         this.emf = emf;
     }
+    private EntityManagerFactory emf = Persistence.createEntityManagerFactory("my_persistence_unit");
     
-    public UsuarioDAO(){
-    }
-   
-    
+    public UsuarioDAO(){}
 
     public EntityManager getEntityManager() {
         return emf.createEntityManager();
     }
 
-    public void create(Usuario usuario) throws PreexistingEntityException, RollbackFailureException, Exception {
+    public void create(Usuario usuario) throws PreexistingEntityException, Exception {
         EntityManager em = null;
         try {
-            utx.begin();
             em = getEntityManager();
+            em.getTransaction().begin();
             em.persist(usuario);
-            utx.commit();
-        } catch (IllegalStateException | SecurityException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException | RollbackException | SystemException ex) {
-            try {
-                utx.rollback();
-            } catch (IllegalStateException | SecurityException | SystemException re) {
-                throw new RollbackFailureException("An error occurred attempting to roll back the transaction.", re);
-            }
+            em.getTransaction().commit();
+        } catch (Exception ex) {
             if (findUsuario(usuario.getId()) != null) {
-                throw new PreexistingEntityException("Usuario " + usuario + " already exists.", ex);
+                throw new PreexistingEntityException("Alumno " + usuario + " already exists.", ex);
             }
             throw ex;
         } finally {
@@ -72,24 +54,19 @@ public class UsuarioDAO implements Serializable {
         }
     }
 
-    public void edit(Usuario usuario) throws NonexistentEntityException, RollbackFailureException, Exception {
+    public void edit(Usuario usuario) throws NonexistentEntityException, Exception {
         EntityManager em = null;
         try {
-            utx.begin();
             em = getEntityManager();
+            em.getTransaction().begin();
             usuario = em.merge(usuario);
-            utx.commit();
-        } catch (IllegalStateException | SecurityException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException | RollbackException | SystemException ex) {
-            try {
-                utx.rollback();
-            } catch (IllegalStateException | SecurityException | SystemException re) {
-                throw new RollbackFailureException("An error occurred attempting to roll back the transaction.", re);
-            }
+            em.getTransaction().commit();
+        } catch (Exception ex) {
             String msg = ex.getLocalizedMessage();
             if (msg == null || msg.length() == 0) {
                 Integer id = usuario.getId();
                 if (findUsuario(id) == null) {
-                    throw new NonexistentEntityException("The usuario with id " + id + " no longer exists.");
+                    throw new NonexistentEntityException("The alumno with id " + id + " no longer exists.");
                 }
             }
             throw ex;
@@ -100,27 +77,20 @@ public class UsuarioDAO implements Serializable {
         }
     }
 
-    public void destroy(Integer id) throws NonexistentEntityException, RollbackFailureException, Exception {
+    public void destroy(Integer id) throws NonexistentEntityException, Exception {
         EntityManager em = null;
         try {
-            utx.begin();
             em = getEntityManager();
+            em.getTransaction().begin();
             Usuario usuario;
             try {
                 usuario = em.getReference(Usuario.class, id);
                 usuario.getId();
             } catch (EntityNotFoundException enfe) {
-                throw new NonexistentEntityException("The usuario with id " + id + " no longer exists.", enfe);
+                throw new NonexistentEntityException("The alumno with id " + id + " no longer exists.", enfe);
             }
             em.remove(usuario);
-            utx.commit();
-        } catch (NonexistentEntityException | IllegalStateException | SecurityException | HeuristicMixedException | HeuristicRollbackException | NotSupportedException | RollbackException | SystemException ex) {
-            try {
-                utx.rollback();
-            } catch (IllegalStateException | SecurityException | SystemException re) {
-                throw new RollbackFailureException("An error occurred attempting to roll back the transaction.", re);
-            }
-            throw ex;
+            em.getTransaction().commit();
         } finally {
             if (em != null) {
                 em.close();
